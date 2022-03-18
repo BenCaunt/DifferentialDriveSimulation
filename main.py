@@ -1,9 +1,13 @@
 from cProfile import label
+from tkinter import FIRST
 from traceback import print_tb
 from turtle import distance
 import matplotlib.pyplot as plt
 import numpy as np
 import math
+
+
+from enum import Enum
 
 TAU = 2*math.pi
 
@@ -147,17 +151,20 @@ def sinc(x):
     else:
         return math.sin(x)/x
 
-# simulate the system for 10 seconds with a dt of 0.1 seconds
 dt = 0.1
-t = np.arange(0,250,dt)
+t = np.arange(0,250 * 10,dt)
 
 positionsX = []
 positionsY = []
 
 thetaError = []
 
-referenceX = -10
-referenceY = 40
+referenceX = 10
+referenceY = 10
+
+firstPosition = (-10, 40)
+secondPosition = (10, 40)
+thirdPosition = (20, -20)
 
 drivePid = PIDController(Kp=0.01,Ki=0.0,Kd=0.0,dt=dt)
 turnPid = PIDController(Kp=0.09,Ki=0.0,Kd=0.0,dt=dt)
@@ -167,7 +174,21 @@ distances = []
 leftVelocities = []
 rightVelocities = []
 
+
+class FollowingStates(Enum):
+    FIRST = 0
+    SECOND = 1 
+    THIRD = 2
+
+state = FollowingStates.FIRST
+
 for i in range(len(t)):
+
+
+    print("state: " + str(state))
+
+    # print refences
+    print("reference: " + str(referenceX) + "," + str(referenceY))
 
 
     x_pos = x[1]
@@ -189,7 +210,25 @@ for i in range(len(t)):
 
     distances.append(distance)
     # print the heading, reference heading, and error in degrees
+    if state == FollowingStates.FIRST:
+        referenceX = firstPosition[0]
+        referenceY = firstPosition[1]
+        distance = math.sqrt((referenceX - x_pos)**2 + (referenceY - y_pos)**2)
+        if (distance < 0.1):
+            print("Reached first position")
+            state = FollowingStates.SECOND
+    elif state == FollowingStates.SECOND:
+        referenceX = secondPosition[0]
+        referenceY = secondPosition[1]
+        distance = math.sqrt((referenceX - x_pos)**2 + (referenceY - y_pos)**2)
 
+        if (distance < 0.1):
+            print("Reached second position")
+            state = FollowingStates.THIRD
+    elif state == FollowingStates.THIRD:
+        referenceX = thirdPosition[0]
+        referenceY = thirdPosition[1]
+            
     headings.append(math.degrees(x[2]))
     refences.append(math.degrees(reference))
 
@@ -197,16 +236,8 @@ for i in range(len(t)):
     turnPower = turnPid.update(error=headingError)
 
     voltage_l = forwardPower - turnPower
-    voltage_r = forwardPower  + turnPower
-    # voltage_l = 0
-    # voltage_r = 0
-    # if t[i] < 3:
-    #     voltage_l = 0.99
-    #     voltage_r = 1
+    voltage_r = forwardPower + turnPower
 
-
-
-    
     x = simulate(x,voltage_l,voltage_r,dt)
     # print("x")
     # print(x)
@@ -217,7 +248,9 @@ for i in range(len(t)):
 
 
 plt.plot(positionsY,positionsX,label="Position")
-plt.scatter([referenceX],[referenceY],c='r',label="Reference Pose")
+plt.scatter([firstPosition[0]],[firstPosition[1]],c='g',label="First Pose")
+plt.scatter([secondPosition[0]],[secondPosition[1]],c='b',label="Second Pose")
+plt.scatter([thirdPosition[0]],[thirdPosition[1]],c='y',label="Third Pose")
 plt.legend()
 plt.show()
 
