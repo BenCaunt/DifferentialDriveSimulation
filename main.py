@@ -1,10 +1,47 @@
 from cProfile import label
+from traceback import print_tb
 from turtle import distance
 import matplotlib.pyplot as plt
 import numpy as np
 import math
 
+TAU = 2*math.pi
 
+	# public static double normalizeAngleRR(double radians) {
+	# 	double modifiedAngle = radians % TAU;
+	# 	modifiedAngle = (modifiedAngle + TAU) % TAU;
+	# 	return modifiedAngle;
+	# }
+
+def normalizeAngleRR(radians):
+    modifiedAngle = radians % TAU
+    modifiedAngle = (modifiedAngle + TAU) % TAU
+    return modifiedAngle
+
+
+	# /**
+	#  * sus thing that sometimes fixes imu data
+	#  * @param radians read angle in radians
+	#  * @return sus angle
+	#  */
+	# public static double normalizeAngle(double radians) {
+	# 	return AngleWrap(-normalizeAngleRR(radians));
+	# }
+
+def normalizeAngle(radians):
+    return angleWrap(-normalizeAngleRR(radians))
+	# /**
+	#  * calculates the normalized heading error from roadrunner odometry
+	#  * @param referenceRadians the angle we would like to be at
+	#  * @param stateRadians the angle where we are
+	#  * @return the normalized heading error in radians
+	#  */
+	# public static double normalizedHeadingError(double referenceRadians, double stateRadians) {
+
+	# 	return normalizeAngle(referenceRadians - stateRadians);
+	# }
+def normalizeHeadingError(referenceRadians, stateRadians):
+    return normalizeAngle(referenceRadians - stateRadians)
 
 class PIDController:
     def __init__(self,Kp,Ki,Kd,dt):
@@ -23,6 +60,8 @@ class PIDController:
 
 def angleWrap(x):
     return math.atan2(math.sin(x),math.cos(x))
+
+
 Kv = 0.5 # Velocity given input 
 Ka = 0.5 # Acceleration given input
 W = 0.2 # Wheelbase
@@ -45,7 +84,7 @@ def getB():
 def getA(theta):
     A = np.zeros((5,5))
 
-    # rotation portion of the A matrix
+    # # rotation portion of the A matrix
     A[0][0] = math.cos(theta)
     A[0][1] = -math.sin(theta)
     A[1][0] = math.sin(theta)
@@ -58,6 +97,8 @@ def getA(theta):
 
 
     return A
+
+
 
 def getC():
     return np.identity(5)
@@ -78,21 +119,25 @@ def simulate(x,voltage_l,voltage_r,dt):
     A = getA(x[2])
     B = getB()
     u = getU(voltage_l=voltage_l,voltage_r=voltage_r)
-    print("A")
-    print(A)
-    print("B")
-    print(B)
-    print("u")
-    print(u)
-    print("x")
-    print(x)
+    # print("A")
+    # print(A)
+    # print("B")
+    # print(B)
+    # print("u")
+    # print(u)
+    # print("x")
+    # print(x)
     vl = x[3]
     vr = x[4]
+
+
 
 
     xdot = A @ calculateXVector(vl, vr) + B @ u
     x = x + xdot*dt
     x[2] = angleWrap(x[2])
+
+
     return x
 
 
@@ -114,36 +159,80 @@ thetaError = []
 referenceX = -10
 referenceY = 40
 
-drivePid = PIDController(Kp=0.21,Ki=0.0,Kd=0.0,dt=dt)
-turnPid = PIDController(Kp=0.06,Ki=0.0,Kd=0.019,dt=dt)
+drivePid = PIDController(Kp=0.01,Ki=0.0,Kd=0.0,dt=dt)
+turnPid = PIDController(Kp=0.09,Ki=0.0,Kd=0.0,dt=dt)
+headings = []
+refences = []
+distances = []
+leftVelocities = []
+rightVelocities = []
 
 for i in range(len(t)):
 
-    # calculate the error
-    distance = math.sqrt((referenceX - x[0])**2 + (referenceY - x[1])**2)
-    headingError = math.atan2(referenceY - x[1],referenceX - x[0]) - x[2]
-    thetaError.append(headingError + math.pi)
-    headingError = angleWrap(headingError)
 
-    forwardPower = drivePid.update(error=-distance)
+    x_pos = x[1]
+    y_pos = x[0]
+
+    print("x: " + str(x[0]))
+    print("y: " + str(x[1]))
+    print("theta: " + str(x[2]))
+    print("vl: " + str(x[3]))
+    print("vr: " + str(x[4]))
+    leftVelocities.append(x[3])
+    rightVelocities.append(x[4])
+
+    # calculate the error
+    distance = math.sqrt((referenceX - x_pos)**2 + (referenceY - y_pos)**2)
+    reference = math.atan2(referenceX - x_pos,referenceY - y_pos)
+    headingError = angleWrap(reference- x[2])
+    thetaError.append(math.degrees(headingError))
+
+    distances.append(distance)
+    # print the heading, reference heading, and error in degrees
+
+    headings.append(math.degrees(x[2]))
+    refences.append(math.degrees(reference))
+
+    forwardPower = drivePid.update(error=distance)
     turnPower = turnPid.update(error=headingError)
 
-    voltage_l = forwardPower * sinc(headingError) + turnPower
-    voltage_r = forwardPower * sinc(headingError) - turnPower
+    voltage_l = forwardPower - turnPower
+    voltage_r = forwardPower  + turnPower
+    # voltage_l = 0
+    # voltage_r = 0
+    # if t[i] < 3:
+    #     voltage_l = 0.99
+    #     voltage_r = 1
+
+
 
     
     x = simulate(x,voltage_l,voltage_r,dt)
-    print("x")
-    print(x)
+    # print("x")
+    # print(x)
     positionsX.append(x[0])
     positionsY.append(x[1]) 
 
-plt.plot(positionsX,positionsY,label="Position")
+
+
+
+plt.plot(positionsY,positionsX,label="Position")
 plt.scatter([referenceX],[referenceY],c='r',label="Reference Pose")
 plt.legend()
 plt.show()
 
-plt.cla()
 plt.plot(t,thetaError,label="Theta Error")
+plt.plot(t,headings,label="Heading")
+plt.plot(t,refences,label="Reference Heading")
+plt.legend()
+plt.show()
+
+
+plt.plot(t,distances,label="Distance")
+plt.legend()
+plt.show()
+
+plt.plot(t,leftVelocities,label="Left Velocity")
+plt.plot(t,rightVelocities,label="Right Velocity")
 plt.legend()
 plt.show()
