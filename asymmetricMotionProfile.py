@@ -28,7 +28,7 @@ class motionState:
     def __str__(self) -> str:
         return "x: " + str(self.x) + " v: " + str(self.v) + " a: " + str(self.a)
 
-class asymetricalProfile:
+class asymmetricalProfile:
     def __init__(self, max_accel, max_decel, max_vel, targetPosition):
         self.max_accel = max_accel
         self.max_decel = max_decel
@@ -95,7 +95,7 @@ class asymetricalProfile:
         return motionState(position, velocity, accel)
 
 
-profile = asymetricalProfile(max_accel, max_decel, max_vel, targetPosition)
+profile = asymmetricalProfile(max_accel, max_decel, max_vel, targetPosition)
 
 # graph the profile 
 time = np.arange(0, profile.profileDuration, 0.01)
