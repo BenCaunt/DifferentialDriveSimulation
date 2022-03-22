@@ -3,10 +3,10 @@ from math import fabs
 from math import sqrt
 import numpy as np
 
-max_accel = 4
-max_decel = -3.5
+max_accel = 12
+max_decel = -4
 max_vel = 10
-targetPosition = 20
+targetPosition = 30
 
 
 def signum(x):
@@ -50,14 +50,14 @@ class asymetricalProfile:
         self.dt2 = fabs(self.targetPosition)/fabs(self.max_vel) - averageDt
         if (self.dt2 < 0):
             self.dt2 = 0
+            
+            if (fabs(self.max_accel) > fabs(self.max_decel)):
+                self.max_accel = fabs(self.max_decel)
+            else:
+                self.max_decel = fabs(self.max_accel)
+
             self.dt1 = sqrt(fabs(self.targetPosition)/fabs(self.max_accel))
-
-            if (fabs(self.max_accel) == fabs(max_decel)):
-                self.dt3 = sqrt(fabs(self.targetPosition)/fabs(self.max_decel))
-            else: 
-                self.dt3 = (self.dt1 * fabs(self.max_accel))/fabs(self.max_decel)
-
-
+            self.dt3 = sqrt(fabs(self.targetPosition)/fabs(self.max_decel))
 
         self.profileDuration = self.dt1 + self.dt2 + self.dt3
     def getState(self, seconds):
