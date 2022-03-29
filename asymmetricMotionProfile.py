@@ -3,10 +3,10 @@ from math import fabs
 from math import sqrt
 import numpy as np
 
-max_accel = 12
-max_decel = 4
-max_vel = 10
-targetPosition = 30
+max_accel = 50
+max_decel = 20
+max_vel = 60
+targetPosition = 300
 
 
 def signum(x):
