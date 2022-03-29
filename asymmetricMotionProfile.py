@@ -4,7 +4,7 @@ from math import sqrt
 import numpy as np
 
 max_accel = 50
-max_decel = 20
+max_decel = 30
 max_vel = 60
 targetPosition = 300
 
